@@ -1,1 +1,2 @@
 customtkinter==5.0.1
+mysql.connector==8.0
