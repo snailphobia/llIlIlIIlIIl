@@ -12,3 +12,8 @@
 
     it will encrypt your passwords using a master password and a salt, so you can't access
     them without the master password
+
+***
+
+    database user: admin
+    database password: masterslave
