@@ -2,10 +2,10 @@ import customtkinter as ctk
 import os
 import platform
 import hashlib as hl
-import pymysql as sql
+# import pymysql as sql
+import dbset
 
 if platform.system() == 'Linux':
-    #!/usr/bin/env python
     if os.environ.get('DISPLAY','') == '':
         print('no display found. Using :0.0')
         os.environ.__setitem__('DISPLAY', ':0.0')
@@ -36,22 +36,6 @@ class User():
     def test(self):
         self.addtolist(context='context', key='test')
         print(self.getpass('context'))
-
-class DB():
-    ENDPOINT='db-key-storage.clpjvywzzlfe.eu-central-1.rds.amazonaws.com'
-    PORT='3306'
-    USER='admin'
-    REGION='eu-central-1'
-    DBNAME='test'
-    os.environ['LIBMYSQL_ENABLE_CLEARTEXT_PLUGIN'] = '1'
-    
-    def __init__(self):
-        conn = sql.connect(host=self.ENDPOINT, user=self.USER, passwd='masterslave', db = self.DBNAME, connect_timeout = 5)
-        cursor = conn.cursor()
-        cursor.execute('CREATE TABLE IF NOT EXISTS users (username VARCHAR(255), password VARCHAR(255))')
-        cursor.execute('SELECT * FROM users')
-        data = cursor.fetchone()
-        print(data)
 
 class Main():
     userlist = []
@@ -96,7 +80,7 @@ class Main():
         return
 
     def __init__(self):
-        dbinstance = DB()
+        dbinstance = dbset.DB()
         ctk.set_default_color_theme('dark-blue')
         self.root_ctk = ctk.CTk()
         self.root_ctk.title('rev 0.1')
