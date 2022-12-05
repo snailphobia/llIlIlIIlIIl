@@ -17,15 +17,15 @@ class User():
     def __init__(self, username, password):
         self.name = username
         self.password = password
-        self.test()
+        # self.test()
     
     def encrypt(self, key):
         hasher = hl.sha256()
-        hasher.update(bytes(self.password + key, 'utf-8'))
+        hasher.update(bytes(self.password + key, 'utf-8')) # in this case key will be the context concatenated to the database hash
         return hasher.hexdigest()
 
     def addtolist(self, context, key): # context is a string representing the context of the password, key is the initial (plain) password
-        self.passlist.append([context, self.encrypt(key)])
+        self.passlist.append([context, self.encrypt(context + key)])
 
     def getpass(self, context):
         for i in self.passlist:
@@ -38,11 +38,12 @@ class User():
         print(self.getpass('context'))
 
 class Main():
+    loggedin = False
     userlist = []
     def adduser(self):
         derived = ctk.CTkToplevel(self.root_ctk)
         derived.title('Register form')
-        derived.geometry('400x240')
+        derived.geometry('420x240')
 
         def register():
             if pass_entry.get() == pass_confirm_entry.get():
@@ -50,28 +51,31 @@ class Main():
                 derived.destroy()
 
         # username entry
-        user_entry = ctk.CTkEntry(derived, width=300)
-        user_entry.grid(row=0, column=1, padx=10, pady=10)
+        user_entry = ctk.CTkEntry(derived, width=300, placeholder_text='Username')
+        user_entry.place(relx = 0.5, rely = 0.1, anchor = 'center')
 
         # password entry
-        pass_entry = ctk.CTkEntry(derived, width=300)
-        pass_entry.grid(row=1, column=1, padx=10, pady=10)
+        pass_entry = ctk.CTkEntry(derived, width=300, placeholder_text='Password')
+        pass_entry.place(relx = 0.5, rely = 0.3, anchor = 'center')
 
         # password confirm entry
-        pass_confirm_entry = ctk.CTkEntry(derived, width=300)
-        pass_confirm_entry.grid(row=2, column=1, padx=10, pady=10)
+        pass_confirm_entry = ctk.CTkEntry(derived, width=300, placeholder_text='Confirm password')
+        pass_confirm_entry.place(relx = 0.5, rely = 0.5, anchor = 'center')
 
         # register button
         register_button = ctk.CTkButton(derived, text='Register', width=30, command = register)
-        register_button.grid(row=3, column=1, padx=10, pady=10)
+        register_button.place(relx = 0.5, rely = 0.7, anchor = 'center')
 
         print('hello')
     
+    # note that even if anyone has access to the database, they won't be able to decrypt the passwords because they don't have the key
+    # the login system is just a proof of concept and only used to separate the tables in the database
     def checklogin(self, user, passw):
         for i in self.userlist:
             if i.name == user:
                 if i.password == passw:
                     print('Logged in') # replace with label
+                    loggedin = True
                     return
                 else:
                     print('Wrong password') # replace with label
@@ -83,29 +87,29 @@ class Main():
         dbinstance = dbset.DB()
         ctk.set_default_color_theme('dark-blue')
         self.root_ctk = ctk.CTk()
-        self.root_ctk.title('rev 0.1')
-        self.root_ctk.geometry('690x420')
+        self.root_ctk.title('rev 0.5')
+        self.root_ctk.geometry('420x200')
 
         def getinput():
             self.checklogin(user_entry.get(), pass_entry.get())
             return
 
         # user entry
-        user_entry = ctk.CTkEntry(self.root_ctk, width=300)
-        user_entry.grid(row=0, column=1, padx=10, pady=10)
+        user_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Username')
+        user_entry.place(relx = 0.5, rely = 0.2, anchor = 'center')
 
         # password entry
-        pass_entry = ctk.CTkEntry(self.root_ctk, width=300)
-        pass_entry.grid(row=1, column=1, padx=10, pady=10)
+        pass_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Password')
+        pass_entry.place(relx = 0.5, rely = 0.4, anchor = 'center')
 
         # login button
         login_button = ctk.CTkButton(self.root_ctk, text='Login', width=30, command = getinput)
-        login_button.grid(row=2, column=1, padx=10, pady=10)
+        login_button.place(relx = 0.5, rely = 0.6, anchor = 'center')
         
         # register button
         register_button = ctk.CTkButton(self.root_ctk, text='Register', width=30, command = self.adduser)
-        register_button.grid(row=3, column=1, padx=10, pady=10)
-    
-        self.root_ctk.mainloop()
+        register_button.place(relx = 0.5, rely = 0.8, anchor = 'center')
 
-mc = Main()
+if __name__ == '__main__':
+    mc = Main()
+    mc.root_ctk.mainloop()
