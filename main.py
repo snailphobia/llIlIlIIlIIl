@@ -40,15 +40,32 @@ class User():
 class Main():
     loggedin = False
     userlist = []
+
+    def loaduserlist(self):
+        # load userlist from database from users table
+        self.dbinstance.cursor.execute('SELECT * FROM users')
+        for i in self.dbinstance.cursor.fetchall():
+            self.userlist.append(User(i[0], i[1]))
+        return
+
     def adduser(self):
         derived = ctk.CTkToplevel(self.root_ctk)
         derived.title('Register form')
         derived.geometry('420x240')
 
         def register():
+            # search if user already exists
+            for i in self.userlist:
+                if i.name == user_entry.get():
+                    print('User already exists') # replace with label
+                    return
+            
             if pass_entry.get() == pass_confirm_entry.get():
+                self.dbinstance.dbadduser(user_entry.get(), pass_entry.get())  
                 self.userlist.append(User(username=user_entry.get(), password=pass_entry.get()))
                 derived.destroy()
+            
+            return
 
         # username entry
         user_entry = ctk.CTkEntry(derived, width=300, placeholder_text='Username')
@@ -66,7 +83,7 @@ class Main():
         register_button = ctk.CTkButton(derived, text='Register', width=30, command = register)
         register_button.place(relx = 0.5, rely = 0.7, anchor = 'center')
 
-        print('hello')
+        return
     
     # note that even if anyone has access to the database, they won't be able to decrypt the passwords because they don't have the key
     # the login system is just a proof of concept and only used to separate the tables in the database
@@ -75,7 +92,9 @@ class Main():
             if i.name == user:
                 if i.password == passw:
                     print('Logged in') # replace with label
-                    loggedin = True
+                    self.loggedin = True
+                    self.root_ctk.withdraw()
+                    self.loggedinclient()
                     return
                 else:
                     print('Wrong password') # replace with label
@@ -83,12 +102,30 @@ class Main():
         print('User not found') # replace with label
         return
 
+    # if login is successful, open the main window
+    def loggedinclient(self):
+        self.cl = ctk.CTkToplevel(self.root_ctk)
+        self.cl.title('Logged in')
+        self.cl.geometry('420x200')
+
+        def quit(self):
+            self.loggedin = False
+            self.cl.destroy()
+            self.root_ctk.deiconify()
+            return
+
+        self.cl.protocol('WM_DELETE_WINDOW', lambda: quit(self))
+        self.cl.mainloop()
+        
+
     def __init__(self):
-        dbinstance = dbset.DB()
+        self.dbinstance = dbset.DB()
         ctk.set_default_color_theme('dark-blue')
         self.root_ctk = ctk.CTk()
-        self.root_ctk.title('rev 0.5')
+        self.root_ctk.title('rev 0.6')
         self.root_ctk.geometry('420x200')
+
+        self.loaduserlist()
 
         def getinput():
             self.checklogin(user_entry.get(), pass_entry.get())

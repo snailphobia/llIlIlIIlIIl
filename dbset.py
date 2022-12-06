@@ -2,15 +2,15 @@ import os
 import pymysql as sql
 
 class DB():
-    ENDPOINT='db-key-storage.clpjvywzzlfe.eu-central-1.rds.amazonaws.com'
-    PORT='3306'
-    USER='admin'
-    REGION='eu-central-1'
-    DBNAME='test'
+    ENDPOINT = 'db-key-storage.clpjvywzzlfe.eu-central-1.rds.amazonaws.com'
+    PORT = 3306
+    USER = 'admin'
+    REGION = 'eu-central-1'
+    DBNAME = 'test'
     
     def __init__(self):
         os.environ['LIBMYSQL_ENABLE_CLEARTEXT_PLUGIN'] = '1'
-        self.conn = sql.connect(host=self.ENDPOINT, user=self.USER, passwd='masterslave', db = self.DBNAME, connect_timeout = 5)
+        self.conn = sql.connect(host=self.ENDPOINT, user=self.USER, passwd='masterslave', db = self.DBNAME, connect_timeout = 5, port=self.PORT)
         self.cursor = self.conn.cursor()
         self.cursor.execute('CREATE TABLE IF NOT EXISTS users (username VARCHAR(255), password VARCHAR(255))')
         # cursor.execute('INSERT INTO users (username, password) VALUES ("test2", "test2")')
