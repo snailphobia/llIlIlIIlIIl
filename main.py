@@ -94,7 +94,7 @@ class Main():
                     print('Logged in') # replace with label
                     self.loggedin = True
                     self.root_ctk.withdraw()
-                    self.loggedinclient()
+                    self.loggedinclient(user)
                     return
                 else:
                     print('Wrong password') # replace with label
@@ -103,7 +103,7 @@ class Main():
         return
 
     # if login is successful, open the main window
-    def loggedinclient(self):
+    def loggedinclient(self, user):
         self.cl = ctk.CTkToplevel(self.root_ctk)
         self.cl.title('Logged in')
         self.cl.geometry('420x200')
@@ -113,6 +113,20 @@ class Main():
             self.cl.destroy()
             self.root_ctk.deiconify()
             return
+
+        # load stored hashes from database
+        self.dbinstance.tableforuser(user)
+        self.dbinstance.cursor.execute('SELECT * FROM ' + user)
+        tuples = self.dbinstance.cursor.fetchall()
+        data = []
+        context = []
+    
+        for i in tuples:
+            data.append((i[0], i[1], i[2]))
+            context.append(i[1])
+        
+        dropdown = ctk.CTkOptionMenu(self.cl, width = 300, height = 30, values = context)
+        dropdown.pack()
 
         self.cl.protocol('WM_DELETE_WINDOW', lambda: quit(self))
         self.cl.mainloop()

@@ -37,6 +37,11 @@ class DB():
         data = self.cursor.fetchone()
         return data # returns the tuple containing the "public" hashcode
 
+    def tableforuser(self, username):
+        self.cursor.execute('CREATE TABLE IF NOT EXISTS {} (username VARCHAR(255), hash VARCHAR(255))'.format(username))
+        self.conn.commit()
+        return
+
     def end(self):
         self.conn.close()
         return
