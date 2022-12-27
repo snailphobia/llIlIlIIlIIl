@@ -2,126 +2,242 @@ import customtkinter as ctk
 import os
 import platform
 import hashlib as hl
-import pymysql as sql
+# import pymysql as sql
+import dbset
 
 if platform.system() == 'Linux':
-    #!/usr/bin/env python
     if os.environ.get('DISPLAY','') == '':
         print('no display found. Using :0.0')
         os.environ.__setitem__('DISPLAY', ':0.0')
 
 class User():
-    # username = ''
-    # password = ''
     passlist = []
     def __init__(self, username, password):
         self.name = username
         self.password = password
-        self.test()
     
-    def encrypt(self, key):
-        hasher = hl.sha256()
-        hasher.update(bytes(self.password + key, 'utf-8'))
-        return hasher.hexdigest()
+    def endecode(self, context, key):
+        lenc = len(context)
+        lenk = len(key)
+        maxlen = max(lenc, lenk) # get the maximum length of the two strings
+        context = context + (maxlen - lenc) * ' ' # pad the shorter string with spaces
+        key = key + (maxlen - lenk) * ' ' # pad the shorter string with spaces
+        result = ''
+        for ch in key:
+            result += chr(ord(ch) ^ ord(context[key.index(ch)]))
+        return result
 
     def addtolist(self, context, key): # context is a string representing the context of the password, key is the initial (plain) password
-        self.passlist.append([context, self.encrypt(key)])
+        self.passlist.append([context, self.endecode(context, key)])
 
     def getpass(self, context):
         for i in self.passlist:
             if i[0] == context:
-                return i[1]
+                return self.endecode(context, i[1])
         return 'No password found'
 
-    def test(self):
-        self.addtolist(context='context', key='test')
-        print(self.getpass('context'))
-
-class DB():
-    ENDPOINT='db-key-storage.clpjvywzzlfe.eu-central-1.rds.amazonaws.com'
-    PORT='3306'
-    USER='admin'
-    REGION='eu-central-1'
-    DBNAME='test'
-    os.environ['LIBMYSQL_ENABLE_CLEARTEXT_PLUGIN'] = '1'
-    
-    def __init__(self):
-        conn = sql.connect(host=self.ENDPOINT, user=self.USER, passwd='masterslave', db = self.DBNAME, connect_timeout = 5)
-        cursor = conn.cursor()
-        cursor.execute('CREATE TABLE IF NOT EXISTS users (username VARCHAR(255), password VARCHAR(255))')
-        cursor.execute('SELECT * FROM users')
-        data = cursor.fetchone()
-        print(data)
+    # debug
+    # def test(self):
+    #     self.addtolist(context='context', key='test')
+    #     print(self.getpass('context'))
 
 class Main():
+    loggedin = False
     userlist = []
+
+    def loaduserlist(self):
+        # load userlist from database from users table
+        self.dbinstance.cursor.execute('SELECT * FROM users')
+        for i in self.dbinstance.cursor.fetchall():
+            self.userlist.append(User(i[0], i[1]))
+        return
+
     def adduser(self):
         derived = ctk.CTkToplevel(self.root_ctk)
         derived.title('Register form')
-        derived.geometry('400x240')
+        derived.geometry('420x240')
+        label = []
 
         def register():
+            # search if user already exists
+            for i in self.userlist:
+                if i.name == user_entry.get():
+                    label = ctk.CTkLabel(derived, text='User already exists', text_color='red')
+                    label.place(relx = 0.5, rely = 0.7, anchor = 'center')
+                    return
+            
             if pass_entry.get() == pass_confirm_entry.get():
+                self.dbinstance.dbadduser(user_entry.get(), pass_entry.get())  
                 self.userlist.append(User(username=user_entry.get(), password=pass_entry.get()))
                 derived.destroy()
+            else:
+                label = ctk.CTkLabel(derived, text='Passwords don\'t match', text_color='red')
+                label.place(relx = 0.5, rely = 0.7, anchor = 'center')
+            
+            return
 
         # username entry
-        user_entry = ctk.CTkEntry(derived, width=300)
-        user_entry.grid(row=0, column=1, padx=10, pady=10)
+        user_entry = ctk.CTkEntry(derived, width=300, placeholder_text='Username')
+        user_entry.place(relx = 0.5, rely = 0.1, anchor = 'center')
 
         # password entry
-        pass_entry = ctk.CTkEntry(derived, width=300)
-        pass_entry.grid(row=1, column=1, padx=10, pady=10)
+        pass_entry = ctk.CTkEntry(derived, width=300, placeholder_text='Password', show='*')
+        pass_entry.place(relx = 0.5, rely = 0.3, anchor = 'center')
 
         # password confirm entry
-        pass_confirm_entry = ctk.CTkEntry(derived, width=300)
-        pass_confirm_entry.grid(row=2, column=1, padx=10, pady=10)
+        pass_confirm_entry = ctk.CTkEntry(derived, width=300, placeholder_text='Confirm password', show='*')
+        pass_confirm_entry.place(relx = 0.5, rely = 0.5, anchor = 'center')
 
         # register button
         register_button = ctk.CTkButton(derived, text='Register', width=30, command = register)
-        register_button.grid(row=3, column=1, padx=10, pady=10)
+        register_button.place(relx = 0.5, rely = 0.9, anchor = 'center')
 
-        print('hello')
+        return
     
+    # note that even if anyone has access to the database, they won't be able to decode the passwords because they don't have the key
+    # the login system is just a proof of concept and only used to separate the tables in the database
     def checklogin(self, user, passw):
         for i in self.userlist:
             if i.name == user:
                 if i.password == passw:
-                    print('Logged in') # replace with label
+                    print('Logged in') # for debug
+                    self.loggedin = True
+                    self.root_ctk.withdraw()
+
+                    # replace the entries with new ones to reset them completely
+                    self.user_entry.grid_remove()
+                    self.pass_entry.grid_remove()
+                    self.user_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Username')
+                    self.user_entry.place(relx = 0.5, rely = 0.2, anchor = 'center')
+                    self.pass_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Password', show='*')
+                    self.pass_entry.place(relx = 0.5, rely = 0.4, anchor = 'center')
+
+                    self.loggedinclient(user)
                     return
                 else:
-                    print('Wrong password') # replace with label
+                    self.pass_entry.grid_remove()
+                    self.pass_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Wrong Password', show='*')
+                    self.pass_entry.place(relx = 0.5, rely = 0.4, anchor = 'center')
                     return
-        print('User not found') # replace with label
+        
+        self.user_entry.grid_remove()
+        self.user_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='User not found')
+        self.user_entry.place(relx = 0.5, rely = 0.2, anchor = 'center')
+        return
+
+    # if login is successful, open the main window
+    def loggedinclient(self, user):
+        self.cl = ctk.CTkToplevel(self.root_ctk)
+        self.cl.title('Logged in')
+        self.cl.geometry('420x200')
+
+        def quit(self):
+            self.loggedin = False
+            self.cl.destroy()
+            self.user_entry.delete(0, 'end')
+            self.pass_entry.delete(0, 'end')
+            self.root_ctk.deiconify()
+            return
+    
+        self.cl.protocol('WM_DELETE_WINDOW', lambda: quit(self))
+
+        # load stored strings from database
+        self.dbinstance.tableforuser(user)
+        self.dbinstance.cursor.execute('SELECT * FROM ' + user)
+        tuples = self.dbinstance.cursor.fetchall()
+        data = []
+        context = []
+        obj_user = User(username='default', password='default')
+        for u in self.userlist:
+            if u.name == user:
+                obj_user = u
+                break
+    
+        for i in tuples:
+            data.append((i[0], i[1], i[2]))
+            context.append(i[1])
+        
+        dropdown = ctk.CTkOptionMenu(self.cl, width = 300, height = 30, values = context)
+        dropdown.place(relx = 0.5, rely = 0.1, anchor = 'center')
+
+        # make an entry for the private key used to encode the string
+        key_entry = ctk.CTkEntry(self.cl, width=300, placeholder_text='Key')
+        key_entry.place(relx = 0.5, rely = 0.3, anchor = 'center')
+
+        # button to decode the string using the provided key and the endecode function in the User class
+        def decode_act():
+
+            for i in data:
+                if i[1] == dropdown.get():
+                    decrypted = obj_user.endecode(key_entry.get(), i[2])
+                    label = ctk.CTkLabel(self.cl, text=decrypted)
+                    label.place(relx = 0.5, rely = 0.5, anchor = 'center')
+                    return
+            return
+        
+        send_it = ctk.CTkButton(self.cl, text='Decode', width=30, command = decode_act)
+        send_it.place(relx = 0.25, rely = 0.7, anchor = 'center')
+
+        # button to add a new entry to the database
+        add_new = ctk.CTkButton(self.cl, text='Add new', width=30, command = lambda: add_new_entry(self, obj_user))
+        add_new.place(relx = 0.75, rely = 0.7, anchor = 'center')
+
+        # adds a new entry box between the button and the key entry for the context
+        # then adds a new button to add the new entry to the database
+        def add_new_entry(self, obj_user):
+            new_entry = ctk.CTkEntry(self.cl, width=300, placeholder_text='Context')
+            new_entry.place(relx = 0.5, rely = 0.5, anchor = 'center')
+            contextn = new_entry.get()
+
+            def add_new_entry_act():
+                self.dbinstance.dbaddentry(user, contextn, obj_user.endecode(key_entry.get(), contextn))
+                delete_extra(new_entry, add_it)
+                return
+
+            add_new.grid_remove()
+            add_it = ctk.CTkButton(self.cl, text='Add', width=30, command = add_new_entry_act)
+            add_it.place(relx = 0.75, rely = 0.7, anchor = 'center')
+            return
+
+        # delete the newly added entry box and button on button press
+        def delete_extra(new_entry, add_it):
+            new_entry.grid_remove()
+            add_it.grid_remove()
+            add_new.place(relx = 0.75, rely = 0.7, anchor = 'center')
+            return
+
         return
 
     def __init__(self):
-        dbinstance = DB()
+        self.dbinstance = dbset.DB()
         ctk.set_default_color_theme('dark-blue')
         self.root_ctk = ctk.CTk()
-        self.root_ctk.title('rev 0.1')
-        self.root_ctk.geometry('690x420')
+        self.root_ctk.minsize(420, 240)
+        self.root_ctk.title('rev 0.7')
+        self.root_ctk.geometry('420x240')
+
+        self.loaduserlist()
 
         def getinput():
-            self.checklogin(user_entry.get(), pass_entry.get())
+            self.checklogin(self.user_entry.get(), self.pass_entry.get())
             return
 
         # user entry
-        user_entry = ctk.CTkEntry(self.root_ctk, width=300)
-        user_entry.grid(row=0, column=1, padx=10, pady=10)
+        self.user_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Username')
+        self.user_entry.place(relx = 0.5, rely = 0.2, anchor = 'center')
 
         # password entry
-        pass_entry = ctk.CTkEntry(self.root_ctk, width=300)
-        pass_entry.grid(row=1, column=1, padx=10, pady=10)
+        self.pass_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Password', show='*')
+        self.pass_entry.place(relx = 0.5, rely = 0.4, anchor = 'center')
 
         # login button
         login_button = ctk.CTkButton(self.root_ctk, text='Login', width=30, command = getinput)
-        login_button.grid(row=2, column=1, padx=10, pady=10)
+        login_button.place(relx = 0.5, rely = 0.7, anchor = 'center')
         
         # register button
         register_button = ctk.CTkButton(self.root_ctk, text='Register', width=30, command = self.adduser)
-        register_button.grid(row=3, column=1, padx=10, pady=10)
-    
-        self.root_ctk.mainloop()
+        register_button.place(relx = 0.5, rely = 0.9, anchor = 'center')
 
-mc = Main()
+if __name__ == '__main__':
+    mc = Main()
+    mc.root_ctk.mainloop()
