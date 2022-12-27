@@ -11,13 +11,10 @@ if platform.system() == 'Linux':
         os.environ.__setitem__('DISPLAY', ':0.0')
 
 class User():
-    # username = ''
-    # password = ''
     passlist = []
     def __init__(self, username, password):
         self.name = username
         self.password = password
-        # self.test()
     
     def encrypt(self, key):
         hasher = hl.sha256()
@@ -85,21 +82,35 @@ class Main():
 
         return
     
-    # note that even if anyone has access to the database, they won't be able to decrypt the passwords because they don't have the key
+    # note that even if anyone has access to the database, they won't be able to decode the passwords because they don't have the key
     # the login system is just a proof of concept and only used to separate the tables in the database
     def checklogin(self, user, passw):
         for i in self.userlist:
             if i.name == user:
                 if i.password == passw:
-                    print('Logged in') # replace with label
+                    print('Logged in') # for debug
                     self.loggedin = True
                     self.root_ctk.withdraw()
+
+                    # replace the entries with new ones to reset them completely
+                    self.user_entry.grid_remove()
+                    self.pass_entry.grid_remove()
+                    self.user_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Username')
+                    self.user_entry.place(relx = 0.5, rely = 0.2, anchor = 'center')
+                    self.pass_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Password', show='*')
+                    self.pass_entry.place(relx = 0.5, rely = 0.4, anchor = 'center')
+
                     self.loggedinclient(user)
                     return
                 else:
-                    print('Wrong password') # replace with label
+                    self.pass_entry.grid_remove()
+                    self.pass_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Wrong Password', show='*')
+                    self.pass_entry.place(relx = 0.5, rely = 0.4, anchor = 'center')
                     return
-        print('User not found') # replace with label
+        
+        self.user_entry.grid_remove()
+        self.user_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='User not found')
+        self.user_entry.place(relx = 0.5, rely = 0.2, anchor = 'center')
         return
 
     # if login is successful, open the main window
@@ -111,6 +122,8 @@ class Main():
         def quit(self):
             self.loggedin = False
             self.cl.destroy()
+            self.user_entry.delete(0, 'end')
+            self.pass_entry.delete(0, 'end')
             self.root_ctk.deiconify()
             return
 
@@ -136,30 +149,31 @@ class Main():
         self.dbinstance = dbset.DB()
         ctk.set_default_color_theme('dark-blue')
         self.root_ctk = ctk.CTk()
-        self.root_ctk.title('rev 0.6')
-        self.root_ctk.geometry('420x200')
+        self.root_ctk.minsize(420, 240)
+        self.root_ctk.title('rev 0.7')
+        self.root_ctk.geometry('420x240')
 
         self.loaduserlist()
 
         def getinput():
-            self.checklogin(user_entry.get(), pass_entry.get())
+            self.checklogin(self.user_entry.get(), self.pass_entry.get())
             return
 
         # user entry
-        user_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Username')
-        user_entry.place(relx = 0.5, rely = 0.2, anchor = 'center')
+        self.user_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Username')
+        self.user_entry.place(relx = 0.5, rely = 0.2, anchor = 'center')
 
         # password entry
-        pass_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Password')
-        pass_entry.place(relx = 0.5, rely = 0.4, anchor = 'center')
+        self.pass_entry = ctk.CTkEntry(self.root_ctk, width=300, placeholder_text='Password', show='*')
+        self.pass_entry.place(relx = 0.5, rely = 0.4, anchor = 'center')
 
         # login button
         login_button = ctk.CTkButton(self.root_ctk, text='Login', width=30, command = getinput)
-        login_button.place(relx = 0.5, rely = 0.6, anchor = 'center')
+        login_button.place(relx = 0.5, rely = 0.7, anchor = 'center')
         
         # register button
         register_button = ctk.CTkButton(self.root_ctk, text='Register', width=30, command = self.adduser)
-        register_button.place(relx = 0.5, rely = 0.8, anchor = 'center')
+        register_button.place(relx = 0.5, rely = 0.9, anchor = 'center')
 
 if __name__ == '__main__':
     mc = Main()
