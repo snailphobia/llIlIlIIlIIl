@@ -42,6 +42,11 @@ class DB():
         self.conn.commit()
         return
 
+    def dbaddentry(self, user, context, string):
+        self.cursor.execute('INSERT INTO {} (username, context, hashed) VALUES ("{}", "{}", "{}")'.format(user, user, context, string))
+        self.conn.commit()
+        return
+
     def end(self):
         self.conn.close()
         return
