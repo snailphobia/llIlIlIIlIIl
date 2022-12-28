@@ -16,24 +16,24 @@ class User():
         self.name = username
         self.password = password
     
-    def endecode(self, context, key):
-        lenc = len(context)
-        lenk = len(key)
-        maxlen = max(lenc, lenk) # get the maximum length of the two strings
-        context = context + (maxlen - lenc) * ' ' # pad the shorter string with spaces
-        key = key + (maxlen - lenk) * ' ' # pad the shorter string with spaces
+    def endecode(self, passw, key):
+        i = 0
         result = ''
-        for ch in key:
-            result += chr(ord(ch) ^ ord(context[key.index(ch)]))
+        lenp = len(passw)
+        for j in range(lenp):
+            if i >= len(key):
+                i -= len(key)
+            result += chr(ord(passw[j]) ^ ord(key[i]))
+        
         return result
 
-    def addtolist(self, context, key): # context is a string representing the context of the password, key is the initial (plain) password
-        self.passlist.append([context, self.endecode(context, key)])
+    def addtolist(self, context, key, passw): # context is a string representing the context of the password, key is the initial (plain) password
+        self.passlist.append([context, self.endecode(passw, key)])
 
-    def getpass(self, context):
+    def getpass(self, context, key):
         for i in self.passlist:
-            if i[0] == context:
-                return self.endecode(context, i[1])
+            if i[1] == context:
+                return self.endecode(i[2], key)
         return 'No password found'
 
     # debug
@@ -170,7 +170,7 @@ class Main():
 
             for i in data:
                 if i[1] == dropdown.get():
-                    decrypted = obj_user.endecode(key_entry.get(), i[2])
+                    decrypted = obj_user.endecode(i[2], key_entry.get())
                     label = ctk.CTkLabel(self.cl, text=decrypted)
                     label.place(relx = 0.5, rely = 0.5, anchor = 'center')
                     return
@@ -206,7 +206,7 @@ class Main():
                     label.place(relx = 0.5, rely = 0.85, anchor = 'center')
                     return
 
-                self.dbinstance.dbaddentry(user, contextn, obj_user.endecode(keyn, contextn))
+                self.dbinstance.dbaddentry(user, contextn, obj_user.endecode(passn, keyn))
                 delete_extra()
                 return
 
@@ -236,7 +236,7 @@ class Main():
         ctk.set_default_color_theme('dark-blue')
         self.root_ctk = ctk.CTk()
         self.root_ctk.minsize(420, 240)
-        self.root_ctk.title('rev 0.8')
+        self.root_ctk.title('rev 1.0')
         self.root_ctk.geometry('420x240')
 
         self.loaduserlist()
