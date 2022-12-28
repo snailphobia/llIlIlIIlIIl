@@ -44,7 +44,7 @@ class User():
 class Main():
     loggedin = False
     userlist = []
-
+    wrapper = []
     def loaduserlist(self):
         # load userlist from database from users table
         self.dbinstance.cursor.execute('SELECT * FROM users')
@@ -129,7 +129,8 @@ class Main():
     def loggedinclient(self, user):
         self.cl = ctk.CTkToplevel(self.root_ctk)
         self.cl.title('Logged in')
-        self.cl.geometry('420x200')
+        self.cl.geometry('420x240')
+        self.cl.minsize(420, 240)
 
         def quit(self):
             self.loggedin = False
@@ -179,31 +180,53 @@ class Main():
         send_it.place(relx = 0.25, rely = 0.7, anchor = 'center')
 
         # button to add a new entry to the database
-        add_new = ctk.CTkButton(self.cl, text='Add new', width=30, command = lambda: add_new_entry(self, obj_user))
+        add_new = ctk.CTkButton(self.cl, text='Add new entry', width=30, command = lambda: add_new_entry(self, obj_user))
         add_new.place(relx = 0.75, rely = 0.7, anchor = 'center')
 
         # adds a new entry box between the button and the key entry for the context
         # then adds a new button to add the new entry to the database
         def add_new_entry(self, obj_user):
-            new_entry = ctk.CTkEntry(self.cl, width=300, placeholder_text='Context')
-            new_entry.place(relx = 0.5, rely = 0.5, anchor = 'center')
-            contextn = new_entry.get()
+            # for context
+            new_entry = ctk.CTkEntry(self.cl, placeholder_text='Context')
+            new_entry.place(relx = 0.25, rely = 0.5, anchor = 'center')
 
+            # for the password to be encoded
+            new_entry_p = ctk.CTkEntry(self.cl, placeholder_text='Password to store', show='*')
+            new_entry_p.place(relx = 0.75, rely = 0.5, anchor = 'center')
+
+            label = []
             def add_new_entry_act():
-                self.dbinstance.dbaddentry(user, contextn, obj_user.endecode(key_entry.get(), contextn))
-                delete_extra(new_entry, add_it)
+                contextn = new_entry.get()
+                passn = new_entry_p.get()
+                keyn = key_entry.get()
+
+                if contextn == '' or passn == '' or keyn == '':
+                    # label with warning message
+                    label = ctk.CTkLabel(self.cl, text='Please fill all the fields', text_color='red')
+                    label.place(relx = 0.5, rely = 0.85, anchor = 'center')
+                    return
+
+                self.dbinstance.dbaddentry(user, contextn, obj_user.endecode(keyn, contextn))
+                delete_extra()
                 return
 
-            add_new.grid_remove()
-            add_it = ctk.CTkButton(self.cl, text='Add', width=30, command = add_new_entry_act)
-            add_it.place(relx = 0.75, rely = 0.7, anchor = 'center')
+            add_it = ctk.CTkButton(self.cl, text='Add to DB', width=30, command = add_new_entry_act)
+            add_it.place(relx = 0.5, rely = 0.7, anchor = 'center')
+
+            # cancel button
+            cancel_it = ctk.CTkButton(self.cl, text='Cancel', width=30, command = delete_extra)
+            cancel_it.place(relx = 0.75, rely = 0.85, anchor = 'center')
+
+            self.wrapper = [new_entry, new_entry_p, add_it, cancel_it]
+            if label != [] and len(self.wrapper) <= 4:
+                self.wrapper.append(label)
             return
 
-        # delete the newly added entry box and button on button press
-        def delete_extra(new_entry, add_it):
-            new_entry.grid_remove()
-            add_it.grid_remove()
-            add_new.place(relx = 0.75, rely = 0.7, anchor = 'center')
+        # delete the newly added items
+        def delete_extra():
+            for i in self.wrapper:
+                i.grid_remove()
+                i.destroy()
             return
 
         return
@@ -213,7 +236,7 @@ class Main():
         ctk.set_default_color_theme('dark-blue')
         self.root_ctk = ctk.CTk()
         self.root_ctk.minsize(420, 240)
-        self.root_ctk.title('rev 0.7')
+        self.root_ctk.title('rev 0.8')
         self.root_ctk.geometry('420x240')
 
         self.loaduserlist()
